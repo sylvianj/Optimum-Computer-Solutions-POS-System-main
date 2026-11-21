@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -17,6 +17,7 @@ import { getStoredAppSettings } from '../../services/settings';
 import { useAppLanguage } from '../../services/language';
 import type { BackendCustomer } from '../../services/api';
 import { toast } from 'sonner';
+import { useSpeech } from '../../hooks/useSpeech';
 
 export type PricingTier = 'retail' | 'wholesale' | 'corporate' | 'loyal';
 
@@ -123,6 +124,8 @@ export function POSPage({
   cashSalesToday
 }: POSPageProps) {
   const { t } = useAppLanguage();
+  const { speak } = useSpeech();
+  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [scannerCode, setScannerCode] = useState('');
@@ -264,6 +267,7 @@ export function POSPage({
     }
 
     addToCart(scannedProduct);
+    speak(`Scanned ${scannedProduct.name}`);
     setScannerCode('');
   };
 
@@ -363,6 +367,8 @@ export function POSPage({
       cashier: cashierName
     });
 
+    speak(`Payment successful. Total is ${formatCurrency(total)}. Thank you!`);
+
     setIsNotificationOpen(true);
     setShowReceipt(true);
     setCart([]);
@@ -388,31 +394,48 @@ export function POSPage({
     handleCompletePayment(payments);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        document.getElementById('product-search-input')?.focus();
+      }
+      if (e.key === 'F2' && cart.length > 0) {
+        e.preventDefault();
+        if (parseFloat(cashTendered) >= total) {
+          handleCashPayment();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cart, cashTendered, total]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Products Section */}
       <div className="lg:col-span-2 min-w-0">
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">{t('Point of Sale')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">{t('Point of Sale')}</h1>
           {isScannerEnabled && (
-            <form onSubmit={handleScannerSubmit} className="mb-3 flex gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <form onSubmit={handleScannerSubmit} className="mb-3 flex gap-2 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-3">
               <div className="relative flex-1">
-                <ScanBarcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600" />
+                <ScanBarcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600 dark:text-blue-400" />
                 <Input
                   value={scannerCode}
                   onChange={(event) => setScannerCode(event.target.value)}
                   placeholder="Scan barcode or enter SKU"
-                  className="bg-white pl-10"
+                  className="bg-white dark:bg-gray-800 dark:border-gray-700 pl-10"
                 />
               </div>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
                 Add
               </Button>
             </form>
           )}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 w-4 h-4" />
             <Input
+              id="product-search-input"
               placeholder={t('Search and select a product...')}
               value={searchTerm}
               onFocus={() => setIsProductDropdownOpen(true)}
@@ -430,24 +453,24 @@ export function POSPage({
                   setIsProductDropdownOpen(false);
                 }
               }}
-              className="pl-10 bg-white border-gray-200"
+              className="pl-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
             />
             {isProductDropdownOpen && (
-              <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+              <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
                 <div className="max-h-80 overflow-y-auto py-1">
                   {filteredProducts.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-500">{t('No products found')}</div>
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{t('No products found')}</div>
                   ) : (
                     filteredProducts.map(product => {
                       const subItems = getProductSubItems(product);
                       const isExpanded = expandedProductId === product.id;
                       return (
-                        <div key={product.id} className="border-b border-gray-100 last:border-b-0">
+                        <div key={product.id} className="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                           <button
                             type="button"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => setExpandedProductId(isExpanded ? null : product.id)}
-                            className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-gray-700 focus:bg-blue-50 dark:focus:bg-gray-700 focus:outline-none transition-colors"
                           >
                             <ImageWithFallback
                               src={product.image}
@@ -455,16 +478,16 @@ export function POSPage({
                               className="h-10 w-10 rounded object-cover"
                             />
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-medium text-gray-900">{product.name}</span>
-                              <span className="block truncate text-xs text-gray-500">{product.sku} - {subItems.length} subitems</span>
+                              <span className="block truncate text-sm font-medium text-gray-900 dark:text-white">{product.name}</span>
+                              <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{product.sku} - {subItems.length} subitems</span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
-                              <Badge variant="outline">{product.category}</Badge>
-                              <span className="text-xs font-medium text-blue-600">{isExpanded ? 'Hide' : 'Choose'}</span>
+                              <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">{product.category}</Badge>
+                              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{isExpanded ? 'Hide' : 'Choose'}</span>
                             </span>
                           </button>
                           {isExpanded && (
-                            <div className="bg-gray-50 px-4 py-2">
+                            <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-2">
                               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                 {subItems.map(subItem => {
                                   const price = product.prices[customerType] * subItem.priceMultiplier;
@@ -474,11 +497,11 @@ export function POSPage({
                                       type="button"
                                       onMouseDown={(e) => e.preventDefault()}
                                       onClick={() => selectProduct(product, subItem)}
-                                      className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left hover:border-blue-400 hover:bg-blue-50 focus:border-blue-500 focus:outline-none"
+                                      className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-left hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 focus:border-blue-500 focus:outline-none transition-colors"
                                     >
-                                      <span className="block text-sm font-medium text-gray-900">{subItem.name}</span>
-                                      <span className="block text-xs text-gray-500">{subItem.quantityLabel}</span>
-                                      <span className="mt-1 block text-sm font-semibold text-green-600">{formatCurrency(price)}</span>
+                                      <span className="block text-sm font-medium text-gray-900 dark:text-white">{subItem.name}</span>
+                                      <span className="block text-xs text-gray-500 dark:text-gray-400">{subItem.quantityLabel}</span>
+                                      <span className="mt-1 block text-sm font-semibold text-green-600 dark:text-green-400">{formatCurrency(price)}</span>
                                     </button>
                                   );
                                 })}
@@ -501,7 +524,7 @@ export function POSPage({
             return (
               <Card
                 key={product.id}
-                className="bg-white border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-lg transition-all"
                 onClick={() => addToCart(product)}
               >
                 <CardContent className="p-4">
@@ -511,22 +534,22 @@ export function POSPage({
                     className="w-full h-24 object-cover rounded-lg mb-3"
                   />
                   <div className="space-y-2">
-                    <h3 className="text-gray-900 font-medium text-sm">{product.name}</h3>
-                    <p className="text-xs text-gray-500 font-mono">{product.sku}</p>
+                    <h3 className="text-gray-900 dark:text-white font-medium text-sm">{product.name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{product.sku}</p>
                     <div className="flex justify-between items-center">
                       <Badge variant="secondary" className={`
-                        ${customerType === 'loyal' ? 'bg-purple-100 text-purple-800' : ''}
-                        ${customerType === 'wholesale' ? 'bg-blue-100 text-blue-800' : ''}
-                        ${customerType === 'corporate' ? 'bg-green-100 text-green-800' : ''}
-                        ${customerType === 'retail' ? 'bg-gray-100 text-gray-800' : ''}
+                        ${customerType === 'loyal' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
+                        ${customerType === 'wholesale' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                        ${customerType === 'corporate' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                        ${customerType === 'retail' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' : ''}
                       `}>
                         {customerType.charAt(0).toUpperCase() + customerType.slice(1)}
                       </Badge>
-                      <span className="text-green-600 font-bold">{formatCurrency(price)}</span>
+                      <span className="text-green-600 dark:text-green-400 font-bold">{formatCurrency(price)}</span>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>{t('Stock')}: {product.stock}</span>
-                      <Badge variant="outline" className="capitalize">{product.uom}</Badge>
+                      <Badge variant="outline" className="capitalize dark:border-gray-600 dark:text-gray-300">{product.uom}</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -536,30 +559,28 @@ export function POSPage({
         </div>
       </div>
 
-      {/* Cart Section */}
       <div className="lg:col-span-1 min-w-0">
-        <Card className="bg-white border-gray-200 lg:sticky lg:top-4">
+        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 lg:sticky lg:top-4 transition-colors duration-200">
           <CardHeader>
-            <CardTitle className="text-gray-900 flex items-center gap-2">
+            <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
               <ShoppingCart className="w-5 h-5" />
               {t('Cart')} {cart.length > 0 && `(${cart.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Customer Selection */}
             <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">{t('Customer')}</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">{t('Customer')}</label>
               <Select value={selectedCustomer} onValueChange={(value) => {
                 setSelectedCustomer(value);
                 const customer = customerOptions.find(c => c.id === value);
                 if (customer) setSelectedPricingTier(customer.type);
               }}>
-                <SelectTrigger className="bg-gray-100 border-gray-200">
+                <SelectTrigger className="bg-gray-100 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                   {customerOptions.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
+                    <SelectItem key={c.id} value={c.id} className="dark:text-gray-200 dark:focus:bg-gray-700">
                       {c.name} • {c.type}
                     </SelectItem>
                   ))}
@@ -567,16 +588,15 @@ export function POSPage({
               </Select>
             </div>
 
-            {/* Pricing Tier */}
             <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">{t('Pricing')}</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">{t('Pricing')}</label>
               <Select value={selectedPricingTier} onValueChange={(value) => setSelectedPricingTier(value as PricingTier)}>
-                <SelectTrigger className="bg-gray-100 border-gray-200">
+                <SelectTrigger className="bg-gray-100 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                   {(['retail', 'wholesale', 'corporate', 'loyal'] as PricingTier[]).map(tier => (
-                    <SelectItem key={tier} value={tier}>
+                    <SelectItem key={tier} value={tier} className="dark:text-gray-200 dark:focus:bg-gray-700">
                       {tier.charAt(0).toUpperCase() + tier.slice(1)}
                     </SelectItem>
                   ))}
@@ -584,16 +604,15 @@ export function POSPage({
               </Select>
             </div>
 
-            {/* Cart Items */}
-            <div className="space-y-2 max-h-[32rem] overflow-y-auto border border-gray-200 rounded-lg p-2">
+            <div className="space-y-2 max-h-[32rem] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2">
               {cart.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 text-sm">{t('No items in cart')}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-sm">{t('No items in cart')}</p>
               ) : (
                 cart.map(item => (
-                  <div key={item.id} className="bg-gray-50 p-2 rounded flex justify-between items-center">
+                  <div key={item.id} className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded flex justify-between items-center border border-transparent dark:border-gray-700">
                     <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 text-sm font-medium truncate">{item.name}</p>
-                      <p className="text-gray-500 text-xs">{formatCurrency(item.price)} / {item.uom}</p>
+                      <p className="text-gray-900 dark:text-white text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">{formatCurrency(item.price)} / {item.uom}</p>
                     </div>
                     <div className="flex items-center gap-1 ml-2">
                       <Input
@@ -601,16 +620,16 @@ export function POSPage({
                         min="1"
                         value={item.quantity}
                         onChange={(event) => updateQuantity(item.id, Math.max(1, Math.floor(Number(event.target.value) || 1)))}
-                        className="h-8 w-16 bg-white px-2 text-center text-sm"
+                        className="h-8 w-16 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 px-2 text-center text-sm dark:text-white"
                         aria-label={`Quantity for ${item.name}`}
                       />
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="w-6 h-6 p-0 ml-1"
+                        className="w-6 h-6 p-0 ml-1 hover:bg-red-100 dark:hover:bg-red-900/30"
                         onClick={() => removeItem(item.id)}
                       >
-                        <Trash2 className="w-3 h-3 text-red-600" />
+                        <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
                       </Button>
                     </div>
                   </div>
@@ -618,17 +637,16 @@ export function POSPage({
               )}
             </div>
 
-            {/* Discount */}
             {cart.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-gray-600 mb-2 block">{t('Discount')} (KSh)</label>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">{t('Discount')} (KSh)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KSh</span>
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">KSh</span>
                   <Input
                     type="number"
                     value={discount}
                     onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="bg-gray-100 border-gray-200 pl-12"
+                    className="bg-gray-100 dark:bg-gray-900 border-gray-200 dark:border-gray-700 pl-12 dark:text-white"
                     min="0"
                     placeholder="0.00"
                   />
@@ -636,33 +654,31 @@ export function POSPage({
               </div>
             )}
 
-            {/* Totals */}
             {cart.length > 0 && (
-              <div className="space-y-2 pt-4 border-t border-gray-200">
-                <div className="flex justify-between text-sm text-gray-600">
+              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                   <span>{t('Subtotal')}:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-sm text-orange-600">
+                  <div className="flex justify-between text-sm text-orange-600 dark:text-orange-400">
                     <span>{t('Discount')}:</span>
                     <span>-{formatCurrency(discountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-gray-500">
+                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
                   <span>{t('Tax')} (incl.):</span>
                   <span>{formatCurrency(totalTax)}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold text-gray-900 bg-blue-50 p-2 rounded">
+                <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-white bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
                   <span>{t('Total')}:</span>
                   <span>{formatCurrency(total)}</span>
                 </div>
 
-                {/* Cash Input */}
                 <div>
-                  <label className="text-sm font-medium text-gray-600 mb-2 block">{t('Cash Tendered')}</label>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">{t('Cash Tendered')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KSh</span>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">KSh</span>
                     <Input
                       type="number"
                       value={cashTendered}
@@ -673,13 +689,23 @@ export function POSPage({
                           setCashTenderedError('');
                         }
                       }}
-                      className={`pl-12 bg-white ${cashTenderedError ? 'border-red-300 focus-visible:ring-red-300' : 'border-gray-300'}`}
+                      className={`pl-12 bg-white dark:bg-gray-900 dark:text-white ${cashTenderedError ? 'border-red-300 dark:border-red-500 focus-visible:ring-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                       placeholder="0.00"
                       step="0.01"
                     />
                   </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Button variant="outline" size="sm" onClick={() => setCashTendered(total.toString())} className="flex-1 font-bold text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900 hover:bg-green-100 dark:hover:bg-green-900/40">
+                      Exact
+                    </Button>
+                    {[100, 200, 500, 1000].map(amount => (
+                      <Button key={amount} variant="outline" size="sm" onClick={() => setCashTendered(amount.toString())} className="flex-1 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                        {amount}
+                      </Button>
+                    ))}
+                  </div>
                   {cashTenderedError && (
-                    <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    <div className="mt-2 rounded-md border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm text-red-700 dark:text-red-400">
                       <p className="font-medium">Insufficient cash</p>
                       <p>{cashTenderedError}</p>
                     </div>
@@ -687,25 +713,24 @@ export function POSPage({
                 </div>
 
                 {change > 0 && (
-                  <div className="bg-green-50 border border-green-200 p-2 rounded">
-                    <p className="text-xs text-green-700">{t('Change Due')}</p>
-                    <p className="text-lg font-bold text-green-600">{formatCurrency(change)}</p>
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 p-2 rounded">
+                    <p className="text-xs text-green-700 dark:text-green-400">{t('Change Due')}</p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(change)}</p>
                   </div>
                 )}
 
-                {/* Payment Buttons */}
                 <div className="space-y-2">
                   <Button
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-transform"
                     disabled={cart.length === 0 || !cashTendered}
                     onClick={handleCashPayment}
                   >
                     <CircleDollarSign className="w-4 h-4 mr-2" />
-                    {t('Pay with Cash')}
+                    {t('Pay with Cash')} (F2)
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 active:scale-95 transition-transform"
                     disabled={cart.length === 0}
                     onClick={() => setShowMultiPayment(true)}
                   >
@@ -716,9 +741,8 @@ export function POSPage({
               </div>
             )}
 
-            {/* Cash Drawer */}
             {cart.length === 0 && (
-              <div className="pt-4 border-t border-gray-200">
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <CashDrawer
                   isOpen={isDrawerOpen}
                   onOpenChange={setIsDrawerOpen}
@@ -733,7 +757,6 @@ export function POSPage({
           </CardContent>
         </Card>
 
-        {/* Transaction Notification */}
         <TransactionNotification
           isOpen={isNotificationOpen}
           onOpenChange={setIsNotificationOpen}
@@ -742,11 +765,10 @@ export function POSPage({
           transactionId={lastTransaction.id}
         />
 
-        {/* Multi Payment Dialog */}
         <Dialog open={showMultiPayment} onOpenChange={setShowMultiPayment}>
-          <DialogContent className="bg-white border-gray-200 max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 max-w-md max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{t('Multi-Payment Checkout')}</DialogTitle>
+              <DialogTitle className="dark:text-white">{t('Multi-Payment Checkout')}</DialogTitle>
             </DialogHeader>
             <MultiPaymentHandler
               totalAmount={total}
@@ -757,9 +779,8 @@ export function POSPage({
           </DialogContent>
         </Dialog>
 
-        {/* Receipt Dialog */}
         <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-          <DialogContent className="bg-white border-gray-200 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 max-w-lg max-h-[90vh] overflow-y-auto">
             <Receipt
               transactionId={lastTransaction.id}
               timestamp={lastTransaction.timestamp}
