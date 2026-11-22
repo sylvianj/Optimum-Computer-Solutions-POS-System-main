@@ -147,7 +147,7 @@ export function Receipt({
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto bg-white border-gray-200 print:shadow-none print:border-0 print:max-w-2xl print:mx-0">
+    <Card id="printable-receipt" className="w-full max-w-md mx-auto bg-white border-gray-200 print:shadow-none print:border-0 print:max-w-2xl print:mx-0">
       <CardHeader className="pb-3 print:pb-2">
         <div className="flex justify-between items-start mb-4 print:mb-2">
           <CardTitle className="text-lg print:text-xl">Receipt</CardTitle>

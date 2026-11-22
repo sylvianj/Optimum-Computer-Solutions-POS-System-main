@@ -84,7 +84,7 @@ export function ExpensesPage({ expenses, onExpenseCreated }: ExpensesPageProps) 
 
   return (
     <div>
-      {/* Header */}
+      
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Expense Management</h1>
@@ -151,7 +151,7 @@ export function ExpensesPage({ expenses, onExpenseCreated }: ExpensesPageProps) 
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="bg-white border-gray-200">
           <CardContent className="p-4">
@@ -209,7 +209,7 @@ export function ExpensesPage({ expenses, onExpenseCreated }: ExpensesPageProps) 
         </Card>
       </div>
 
-      {/* Filters */}
+     
       <Card className="bg-white border-gray-200 mb-6">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -237,7 +237,7 @@ export function ExpensesPage({ expenses, onExpenseCreated }: ExpensesPageProps) 
         </CardContent>
       </Card>
 
-      {/* Expenses Table */}
+    
       <Card className="bg-white border-gray-200">
         <CardHeader>
           <CardTitle className="text-gray-900">Expenses ({filteredExpenses.length})</CardTitle>

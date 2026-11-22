@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { X } from 'lucide-react';
+import { X } from 'lucide-react'; // <-- ShieldCheck removed
 import { UserRole } from '../types/auth';
 import { useAppLanguage } from '../services/language';
 import { canAccessModule, roleLabel, type AppModuleId } from '../services/permissions';
@@ -18,8 +18,9 @@ const allMenuItems = [
   { label: 'Reports', id: 'reports' },
   { label: 'Returns', id: 'returns' },
   { label: 'Users / Staff', id: 'users' },
+  { label: 'Audit Logs', id: 'logs' },
   { label: 'Settings', id: 'settings' }
-] satisfies Array<{ label: string; id: AppModuleId }>;
+] satisfies Array<{ label: string; id: AppModuleId | 'logs' }>;
 
 interface SidebarProps {
   activeItem: string;
@@ -33,15 +34,21 @@ interface SidebarProps {
 export function Sidebar({ activeItem, onItemClick, onLogout, userRole, userName, onClose }: SidebarProps) {
   const { t } = useAppLanguage();
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  
+
   const filteredMenuItems = useMemo(
-    () => allMenuItems.filter(item => canAccessModule(item.id, userRole)),
+    () => allMenuItems.filter(item => {
+      if (item.id === 'logs') {
+        return userRole === 'admin' || userRole === 'super_admin' || userRole === 'manager' || userRole === 'accountant';
+      }
+      return canAccessModule(item.id as AppModuleId, userRole);
+    }),
     [userRole]
   );
 
   const getRoleBadgeColor = (role: UserRole) => {
     switch(role) {
       case 'super_admin':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       case 'admin':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       case 'cashier':

@@ -1,4 +1,4 @@
-# inventory/models.py
+
 from django.db import models, transaction
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from products.models import Product, Category
 
-# SUPPLIER MODEL (MOVED FROM PRODUCTS)
+
 
 class Supplier(models.Model):
     """Supplier/Vendor model - moved from products to inventory"""
@@ -35,10 +35,10 @@ class Supplier(models.Model):
     postal_code = models.CharField(max_length=20, blank=True)
     country = models.CharField(max_length=100, blank=True, default='Kenya')
     
-    # Tax info
+    
     tax_number = models.CharField(max_length=50, blank=True)
     
-    # Bank details
+    
     bank_name = models.CharField(max_length=100, blank=True)
     bank_account = models.CharField(max_length=50, blank=True)
     currency = models.CharField(max_length=10, blank=True, default='KES')
@@ -51,17 +51,17 @@ class Supplier(models.Model):
     lead_time_days = models.PositiveIntegerField(default=0)
     uploaded_documents = models.JSONField(default=list, blank=True)
     
-    # Status
+    
     is_active = models.BooleanField(default=True)
     is_preferred = models.BooleanField(default=False)
     
-    # Payment terms
+ 
     payment_terms = models.IntegerField(default=30)
     
-    # Notes
+   
     notes = models.TextField(blank=True)
     
-    # Timestamps
+   
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -88,9 +88,6 @@ class Supplier(models.Model):
         super().save(*args, **kwargs)
 
 
-# ============================================================
-# BATCH MODEL
-# ============================================================
 class Batch(models.Model):
     """Product batches for tracking expiry dates"""
     
@@ -147,9 +144,7 @@ class Batch(models.Model):
         super().save(*args, **kwargs)
 
 
-# ============================================================
-# STOCK MOVEMENT MODEL
-# ============================================================
+
 class StockMovement(models.Model):
     MOVEMENT_TYPES = [
         ('purchase', 'Purchase Order Received'),
@@ -221,9 +216,7 @@ class StockMovement(models.Model):
         super().save(*args, **kwargs)
 
 
-# ============================================================
-# PURCHASE ORDER MODEL
-# ============================================================
+
 class PurchaseOrder(models.Model):
     ORDER_STATUS = [
         ('draft', 'Draft'),
@@ -411,9 +404,7 @@ class PurchaseOrderItem(models.Model):
         return max(self.quantity - self.quantity_received, Decimal('0'))
 
 
-# ============================================================
-# STOCK COUNT MODELS
-# ============================================================
+
 class StockCount(models.Model):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -547,9 +538,7 @@ class StockCountItem(models.Model):
         return f"{self.product.name}: {self.difference}"
 
 
-# ============================================================
-# STORE TRANSFER MODELS
-# ============================================================
+
 class StoreTransfer(models.Model):
     TRANSFER_STATUS = [
         ('pending', 'Pending'),
@@ -745,9 +734,7 @@ class InventoryAlert(models.Model):
         self.save(update_fields=['is_resolved', 'resolved_by', 'resolved_at', 'resolution_notes'])
 
 
-# ============================================================
-# GOODS RECEIVED NOTE (GRN) MODELS
-# ============================================================
+
 class GoodsReceivedNote(models.Model):
     """
     Goods Received Note - documents receipt of goods from a supplier against a PO.
@@ -933,7 +920,7 @@ class GoodsReceivedNoteItem(models.Model):
                 }
             )
 
-        # Create stock movement for accepted goods
+        
         StockMovement.objects.create(
             product=product,
             batch=batch,
@@ -950,7 +937,7 @@ class GoodsReceivedNoteItem(models.Model):
             location=self.location or self.goods_received_note.location,
         )
 
-        # Create alert for rejected items
+       
         if self.quantity_rejected > 0:
             InventoryAlert.objects.create(
                 alert_type='low_stock',
@@ -961,13 +948,13 @@ class GoodsReceivedNoteItem(models.Model):
                 suggested_action="Contact supplier for replacement or credit note.",
             )
 
-        # Mark verified
+        
         self.is_verified = True
         self.verified_by = user
         self.verified_at = timezone.now()
         self.save(update_fields=['is_verified', 'verified_by', 'verified_at', 'updated_at'])
 
-        # Update GRN status
+        
         grn = self.goods_received_note
         total = grn.items.count()
         verified_count = grn.items.filter(is_verified=True).count()
@@ -980,7 +967,7 @@ class GoodsReceivedNoteItem(models.Model):
             grn.status = 'partially_verified'
             grn.save(update_fields=['status', 'updated_at'])
 
-        # Update PO status
+       
         po = grn.purchase_order
         if all(po_item.remaining_to_receive <= 0 for po_item in po.items.all()):
             po.status = 'completed'

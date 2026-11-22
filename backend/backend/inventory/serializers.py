@@ -1,4 +1,4 @@
-# inventory/serializers.py
+
 from rest_framework import serializers
 from decimal import Decimal
 from django.db import transaction
@@ -153,7 +153,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     approved_by_name = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
     
-    # Write-only for creating items
+    
     order_items = serializers.ListField(
         write_only=True,
         required=False,

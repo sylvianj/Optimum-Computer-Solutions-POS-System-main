@@ -1,4 +1,4 @@
-# customers/serializers.py
+
 from rest_framework import serializers
 
 from .models import Customer
@@ -7,7 +7,7 @@ from .models import Customer
 class CustomerSerializer(serializers.ModelSerializer):
     """Main serializer for Customer model."""
 
-    # Read-only fields (API returns but client cannot modify)
+   
     account_reference = serializers.CharField(read_only=True)
     uuid = serializers.UUIDField(read_only=True)
     loyalty_points = serializers.IntegerField(read_only=True)
@@ -15,7 +15,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
-    # Computed fields
+    
     discount_percentage = serializers.SerializerMethodField()
     full_address = serializers.SerializerMethodField()
 

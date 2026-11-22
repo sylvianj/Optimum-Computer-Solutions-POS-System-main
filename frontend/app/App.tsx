@@ -13,6 +13,7 @@ import { ReportsPage } from './components/pages/ReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { ReturnsPage } from './components/pages/ReturnsPage';
 import { SettingsPage } from './components/pages/SettingsPage';
+import { AuditLogsPage } from './components/pages/AuditLogsPage'; // <--- ADDED
 import { LoginPage } from './components/auth/LoginPage';
 import { Toaster } from './components/ui/sonner';
 import { UserRole } from './types/auth';
@@ -393,8 +394,18 @@ export default function App() {
     lowStockSnapshot.current = nextSnapshot;
   }, [products, suppliers]);
 
+
+  
   const handleItemClick = (itemId: string) => {
-    if (!userRole || !canAccessModule(itemId as AppModuleId, userRole)) {
+  
+    if (itemId === 'logs' && userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'manager' && userRole !== 'accountant') {
+      toast.warning('Access restricted', {
+        description: 'Only administrators can view audit logs.'
+      });
+      return;
+    }
+
+    if (itemId !== 'logs' && (!userRole || !canAccessModule(itemId as AppModuleId, userRole))) {
       toast.warning('Access restricted', {
         description: 'Your role does not have access to that module.'
       });
@@ -1350,9 +1361,18 @@ export default function App() {
       return nextDayBalance;
     });
   };
-
   const renderContent = () => {
-    if (userRole && !canAccessModule(activeItem as AppModuleId, userRole)) {
+   
+    if (activeItem === 'logs' && userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'manager' && userRole !== 'accountant') {
+      return (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-900 dark:bg-red-900/20 dark:border-red-900 dark:text-red-200">
+          <h2 className="font-semibold">Access Denied</h2>
+          <p className="mt-1 text-sm">You do not have permission to view audit logs.</p>
+        </div>
+      );
+    }
+
+    if (activeItem !== 'logs' && userRole && !canAccessModule(activeItem as AppModuleId, userRole)) {
       const fallbackModule = firstAccessibleModule(userRole);
       window.setTimeout(() => setActiveItem(fallbackModule), 0);
       return (
@@ -1362,7 +1382,6 @@ export default function App() {
         </div>
       );
     }
-
     switch (activeItem) {
       case 'dashboard':
         return (
@@ -1386,6 +1405,7 @@ export default function App() {
             onOpenDay={handleOpenDay}
             onCloseDay={handleCloseDay}
             onTransactionComplete={handleTransactionComplete}
+            onCustomerCreated={handleCustomerCreated}
           />
         );
       case 'invoices':
@@ -1481,6 +1501,8 @@ export default function App() {
             currentUserRole={userRole || undefined}
           />
         );
+      case 'logs':
+        return <AuditLogsPage />;
       case 'settings':
         return <SettingsPage />;
       default:

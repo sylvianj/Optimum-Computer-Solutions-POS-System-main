@@ -668,8 +668,7 @@ const mapNotificationFromApi = (notification: BackendNotification): BackendNotif
     is_read: notification.is_read ?? Boolean(notification.read_at || notification.status === 'read')
   };
 };
-
-const request = async <T>(path: string, options?: RequestInit & { skipAuth?: boolean }): Promise<T> => {
+export const request = async <T>(path: string, options?: RequestInit & { skipAuth?: boolean }): Promise<T> => {
   const token = getAccessToken();
   const { skipAuth, ...requestOptions } = options || {};
   let response: Response;

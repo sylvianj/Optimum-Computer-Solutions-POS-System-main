@@ -1,4 +1,4 @@
-# inventory/views.py - Add at the very top
+
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -62,7 +62,7 @@ class BatchViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         
-        # Filter expiring soon
+       
         expiring_days = self.request.query_params.get('expiring_days')
         if expiring_days:
             days = int(expiring_days)
@@ -73,7 +73,7 @@ class BatchViewSet(viewsets.ModelViewSet):
                 remaining_quantity__gt=0
             )
         
-        # Filter expired
+       
         expired = self.request.query_params.get('expired')
         if expired and expired.lower() == 'true':
             queryset = queryset.filter(expiry_date__lt=timezone.now().date())
@@ -103,12 +103,12 @@ class BatchViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Consume from batch
+        
         old_quantity = batch.remaining_quantity
         batch.remaining_quantity -= quantity
         batch.save()
         
-        # Record stock movement
+        
         StockMovement.objects.create(
             product=batch.product,
             batch=batch,
@@ -148,7 +148,7 @@ class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         
-        # Date range filter
+        
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
         
@@ -211,7 +211,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         
-        # Admins see all, others see only their own
+        
         if user.role in ['super_admin', 'admin', 'manager']:
             return PurchaseOrder.objects.all()
         return PurchaseOrder.objects.filter(created_by=user)
@@ -242,7 +242,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         """Approve purchase order (manager approval)"""
         po = self.get_object()
         
-        # Check permission
+        
         if request.user.role not in ['super_admin', 'admin', 'manager']:
             return Response(
                 {"error": "Only managers can approve purchase orders"},

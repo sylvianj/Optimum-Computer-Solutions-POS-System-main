@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, Menu, Moon, Sun, Minus, Plus } from 'lucide-react';
+import { Bell, Menu, Moon, Sun, Minus, Plus, Palette, Accessibility, Eye, MousePointer2, PlayCircle, Link2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -126,8 +126,38 @@ export function TopHeader({ onMenuClick, fontScale, setFontScale, isDarkMode, se
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [connectionState, setConnectionState] = useState<'connecting' | 'live' | 'polling'>('connecting');
   const localNotifications = useRef<BackendNotification[]>(readLocalNotifications());
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
+
+  // Accessibility State
+  const [isA11yOpen, setIsA11yOpen] = useState(false);
+  const [a11ySettings, setA11ySettings] = useState({
+    highContrast: false,
+    bigCursor: false,
+    reduceMotion: false,
+    highlightLinks: false,
+  });
 
   const notificationCount = notifications.length;
+
+  // Apply Accessibility Classes to HTML tag
+  useEffect(() => {
+    const root = document.documentElement;
+    if (a11ySettings.highContrast) root.classList.add('high-contrast');
+    else root.classList.remove('high-contrast');
+
+    if (a11ySettings.bigCursor) root.classList.add('big-cursor');
+    else root.classList.remove('big-cursor');
+
+    if (a11ySettings.reduceMotion) root.classList.add('reduce-motion');
+    else root.classList.remove('reduce-motion');
+
+    if (a11ySettings.highlightLinks) root.classList.add('highlight-links');
+    else root.classList.remove('highlight-links');
+  }, [a11ySettings]);
+
+  const toggleA11y = (key: keyof typeof a11ySettings) => {
+    setA11ySettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const refreshNotifications = async () => {
     setIsLoadingNotifications(true);
@@ -282,6 +312,14 @@ export function TopHeader({ onMenuClick, fontScale, setFontScale, isDarkMode, se
     setFontScale(prev => Math.min(150, prev + 10));
   };
 
+  const changeTheme = (theme: string) => {
+    document.documentElement.classList.remove('theme-emerald', 'theme-purple');
+    if (theme !== 'blue') {
+      document.documentElement.classList.add(`theme-${theme}`);
+    }
+    setShowThemeMenu(false);
+  };
+
   return (
     <div className="sticky top-0 z-50 flex min-w-0 items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 shadow-sm sm:px-8 sm:py-4 transition-colors duration-200">
       <div className="flex items-center gap-4">
@@ -298,6 +336,7 @@ export function TopHeader({ onMenuClick, fontScale, setFontScale, isDarkMode, se
           </div>
         </div>
 
+        {/* Font Size */}
         <div className="flex items-center bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 p-0.5">
           <button onClick={handleDecreaseFont} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 transition-colors" aria-label="Decrease font size">
             <Minus size={14} />
@@ -310,6 +349,82 @@ export function TopHeader({ onMenuClick, fontScale, setFontScale, isDarkMode, se
           </button>
         </div>
 
+        {/* Accessibility Menu */}
+        <Popover open={isA11yOpen} onOpenChange={setIsA11yOpen}>
+          <PopoverTrigger asChild>
+            <button 
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Accessibility options"
+            >
+              <Accessibility size={20} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-3 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-xl">
+            <h3 className="font-semibold text-sm mb-3 text-gray-900 dark:text-white">Accessibility</h3>
+            <div className="space-y-1">
+              <button 
+                onClick={() => toggleA11y('highContrast')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${a11ySettings.highContrast ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <div className="flex items-center gap-2"><Eye size={16} /> High Contrast</div>
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${a11ySettings.highContrast ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${a11ySettings.highContrast ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => toggleA11y('bigCursor')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${a11ySettings.bigCursor ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <div className="flex items-center gap-2"><MousePointer2 size={16} /> Big Cursor</div>
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${a11ySettings.bigCursor ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${a11ySettings.bigCursor ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
+
+              <button 
+                onClick={() => toggleA11y('reduceMotion')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${a11ySettings.reduceMotion ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <div className="flex items-center gap-2"><PlayCircle size={16} /> Stop Animations</div>
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${a11ySettings.reduceMotion ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${a11ySettings.reduceMotion ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
+
+              <button 
+                onClick={() => toggleA11y('highlightLinks')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${a11ySettings.highlightLinks ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <div className="flex items-center gap-2"><Link2 size={16} /> Highlight Links</div>
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${a11ySettings.highlightLinks ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${a11ySettings.highlightLinks ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Theme Color */}
+        <div className="relative">
+          <button 
+            onClick={() => setShowThemeMenu(!showThemeMenu)} 
+            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            aria-label="Change theme color"
+          >
+            <Palette size={20} />
+          </button>
+          
+          {showThemeMenu && (
+            <div className="absolute right-0 mt-2 flex gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg z-50">
+              <button onClick={() => changeTheme('blue')} className="w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-sm hover:scale-110 transition-transform" title="Blue Theme" />
+              <button onClick={() => changeTheme('emerald')} className="w-6 h-6 rounded-full bg-emerald-600 border-2 border-white shadow-sm hover:scale-110 transition-transform" title="Emerald Theme" />
+              <button onClick={() => changeTheme('purple')} className="w-6 h-6 rounded-full bg-purple-600 border-2 border-white shadow-sm hover:scale-110 transition-transform" title="Purple Theme" />
+            </div>
+          )}
+        </div>
+
+        {/* Dark Mode Toggle */}
         <button 
           onClick={() => setIsDarkMode(!isDarkMode)} 
           className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -318,6 +433,7 @@ export function TopHeader({ onMenuClick, fontScale, setFontScale, isDarkMode, se
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
+        {/* Notifications */}
         <Popover onOpenChange={(open) => open && refreshNotifications()}>
           <PopoverTrigger asChild>
             <button

@@ -27,14 +27,14 @@ export function Dashboard({ products, completedSales, dayBalance, cashSalesToday
   const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
   const lowStockItems = products.filter(product => product.stock <= (product.reorderLevel || 10));
   
-  // Fixed NaN issue by providing fallbacks
+ 
   const expectedCash = dayBalance.openingBalance || 0;
   const cashVariance = cashSalesToday - expectedCash;
   const hasCriticalAlerts = lowStockItems.length > 0 || cashVariance < 0;
 
   return (
     <div>
-      {/* Header */}
+     
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">DASHBOARD OVERVIEW</h1>
@@ -51,7 +51,7 @@ export function Dashboard({ products, completedSales, dayBalance, cashSalesToday
         )}
       </div>
 
-      {/* KPI Cards */}
+      
       <KPICards
         products={products}
         completedSales={completedSales}
@@ -95,13 +95,13 @@ export function Dashboard({ products, completedSales, dayBalance, cashSalesToday
         </Alert>
       </div>
 
-      {/* Charts Section */}
+     
       <Charts completedSales={completedSales} products={products} />
 
-      {/* Data Tables */}
+      
       <DataTables products={products} completedSales={completedSales} />
 
-      {/* Quick Actions and Staff Leaderboard */}
+      
       <QuickActions completedSales={completedSales} userRole={userRole} onAction={onQuickAction} />
     </div>
   );

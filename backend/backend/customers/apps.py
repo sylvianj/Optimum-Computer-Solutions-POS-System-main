@@ -1,4 +1,4 @@
-# customers/apps.py
+
 from django.apps import AppConfig
 
 class CustomersConfig(AppConfig):
@@ -14,5 +14,5 @@ class CustomersConfig(AppConfig):
         Called when Django starts.
         Import signals here if you have any.
         """
-        # import customers.signals  # Uncomment if you create signals.py
+        
         pass

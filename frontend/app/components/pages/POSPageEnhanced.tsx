@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Search, ShoppingCart, Trash2, CircleDollarSign, CreditCard, ScanBarcode } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, CircleDollarSign, CreditCard, ScanBarcode, UserPlus } from 'lucide-react';
 import { CashDrawer } from '../CashDrawer';
 import { TransactionNotification } from '../TransactionNotification';
 import { MultiPaymentHandler } from '../MultiPaymentHandler';
@@ -15,7 +15,7 @@ import type { PaymentTransaction } from '../MultiPaymentHandler';
 import { formatCurrency } from '../utils/helpers';
 import { getStoredAppSettings } from '../../services/settings';
 import { useAppLanguage } from '../../services/language';
-import type { BackendCustomer } from '../../services/api';
+import type { BackendCustomer, CreateCustomerInput } from '../../services/api';
 import { toast } from 'sonner';
 import { useSpeech } from '../../hooks/useSpeech';
 
@@ -111,6 +111,7 @@ interface POSPageProps {
   onOpenDay: (openingBalance: number) => void;
   onCloseDay: (closingBalance: number) => void;
   cashSalesToday: number;
+  onCustomerCreated?: (customer: CreateCustomerInput) => Promise<void>;
 }
 
 export function POSPage({
@@ -121,7 +122,8 @@ export function POSPage({
   onTransactionComplete,
   onOpenDay,
   onCloseDay,
-  cashSalesToday
+  cashSalesToday,
+  onCustomerCreated
 }: POSPageProps) {
   const { t } = useAppLanguage();
   const { speak } = useSpeech();
@@ -138,6 +140,14 @@ export function POSPage({
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [showMultiPayment, setShowMultiPayment] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  
+  // Quick Add Customer State
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+
   const [lastTransaction, setLastTransaction] = useState({ 
     id: '', 
     customer: 'Walk-in Customer',
@@ -394,6 +404,43 @@ export function POSPage({
     handleCompletePayment(payments);
   };
 
+  const handleQuickAddCustomer = async () => {
+    if (!newCustomerName.trim() || !newCustomerPhone.trim()) {
+      toast.error('Name and Phone are required');
+      return;
+    }
+    if (!onCustomerCreated) {
+      toast.error('Customer creation is not available right now.');
+      return;
+    }
+
+    setIsSavingCustomer(true);
+    try {
+      await onCustomerCreated({
+        name: newCustomerName.trim(),
+        phone: newCustomerPhone.trim(),
+        email: newCustomerEmail.trim(),
+        pricing_tier: 'retail',
+        address_line1: '',
+        address_line2: '',
+        city: '',
+        county: '',
+        postal_code: '',
+        tax_number: null,
+        notes: 'Quick added from POS'
+      });
+      toast.success('Customer added successfully');
+      setIsAddCustomerOpen(false);
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerEmail('');
+    } catch (error) {
+      toast.error('Failed to add customer');
+    } finally {
+      setIsSavingCustomer(false);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F1') {
@@ -568,8 +615,21 @@ export function POSPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            
+            {/* Customer Selection */}
             <div>
-              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">{t('Customer')}</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('Customer')}</label>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsAddCustomerOpen(true)} 
+                  className="h-6 px-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                >
+                  <UserPlus className="w-3 h-3 mr-1" />
+                  New
+                </Button>
+              </div>
               <Select value={selectedCustomer} onValueChange={(value) => {
                 setSelectedCustomer(value);
                 const customer = customerOptions.find(c => c.id === value);
@@ -797,6 +857,54 @@ export function POSPage({
             />
           </DialogContent>
         </Dialog>
+
+        {/* Quick Add Customer Modal */}
+        <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+          <DialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="dark:text-white">Quick Add Customer</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Full Name *</label>
+                <Input 
+                  placeholder="e.g. John Doe" 
+                  value={newCustomerName} 
+                  onChange={(e) => setNewCustomerName(e.target.value)} 
+                  className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 dark:text-white" 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Phone Number *</label>
+                <Input 
+                  placeholder="e.g. 0712345678" 
+                  value={newCustomerPhone} 
+                  onChange={(e) => setNewCustomerPhone(e.target.value)} 
+                  className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 dark:text-white" 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Email Address (Optional)</label>
+                <Input 
+                  placeholder="e.g. john@example.com" 
+                  type="email" 
+                  value={newCustomerEmail} 
+                  onChange={(e) => setNewCustomerEmail(e.target.value)} 
+                  className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 dark:text-white" 
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleQuickAddCustomer} disabled={isSavingCustomer}>
+                  {isSavingCustomer ? 'Saving...' : 'Save Customer'}
+                </Button>
+                <Button variant="outline" className="dark:border-gray-600 dark:text-gray-300" onClick={() => setIsAddCustomerOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );

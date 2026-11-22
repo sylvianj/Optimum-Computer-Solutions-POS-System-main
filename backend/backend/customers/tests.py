@@ -57,17 +57,17 @@ class CustomerModelTest(TestCase):
         """Test updating customer spending and loyalty points"""
         customer = Customer.objects.create(**self.customer_data)
         
-        # Spend 250 KES
+       
         customer.update_spending(Decimal('250.00'))
         customer.refresh_from_db()
         
         self.assertEqual(customer.total_spent, Decimal('250.00'))
-        self.assertEqual(customer.loyalty_points, 2)  # 1 point per 100 KES
+        self.assertEqual(customer.loyalty_points, 2) 
     
     def test_redeem_loyalty_points(self):
         """Test redeeming loyalty points"""
         customer = Customer.objects.create(**self.customer_data)
-        customer.update_spending(Decimal('500.00'))  # Get 5 points
+        customer.update_spending(Decimal('500.00')) 
         customer.refresh_from_db()
         
         self.assertEqual(customer.loyalty_points, 5)
@@ -81,7 +81,7 @@ class CustomerModelTest(TestCase):
     def test_redeem_more_points_than_available(self):
         """Test cannot redeem more points than available"""
         customer = Customer.objects.create(**self.customer_data)
-        customer.update_spending(Decimal('100.00'))  # Get 1 point
+        customer.update_spending(Decimal('100.00')) 
         
         with self.assertRaises(ValidationError):
             customer.redeem_loyalty_points(10)
@@ -104,13 +104,13 @@ class CustomerAPITest(TestCase):
         """Setup API client and auth"""
         self.client = APIClient()
         
-        # Create a test user and get JWT token
+        
         self.user = User.objects.create_user(username='testuser', password='testpass123')
         response = self.client.post('/api/token/', {'username': 'testuser', 'password': 'testpass123'})
         self.token = response.data['access']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
         
-        # Create test customer
+       
         self.customer = Customer.objects.create(
             name='API Test Customer',
             phone='0799999999',
@@ -142,8 +142,8 @@ class CustomerAPITest(TestCase):
     
     def test_redeem_points(self):
         """Test POST /api/customers/{id}/redeem-points/"""
-        # First add some points
-        self.customer.update_spending(Decimal('500.00'))  # Gets 5 points
+        
+        self.customer.update_spending(Decimal('500.00')) 
         self.customer.refresh_from_db()
         
         response = self.client.post(f'/api/customers/{self.customer.id}/redeem-points/', 
